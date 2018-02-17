@@ -1,0 +1,23 @@
+{
+  "name": "coin-watchlist",
+  "version": "1.0.0",
+  "main": "app.js",
+  "author": "Nikia Shaw",
+  "license": "MIT",
+  "scripts": {
+    "scss": "node-sass --source-map true --output-style compressed -o css scss",
+    "autoprefixer": "postcss css/*.css -r -u autoprefixer --no-map​",
+    "buildcss": "yarn run scss && yarn run autoprefixer",
+    "watchcss": "onchange 'scss/*.scss' -- yarn run buildcss",
+    "serve": "browser-sync start -s -f *.html css/*.css js/*.js",
+    "startapp": "parallelshell 'yarn run serve' 'yarn run watchcss'"
+  },
+  "devDependencies": {
+    "autoprefixer": "^7.2.5",
+    "browser-sync": "^2.23.6",
+    "node-sass": "^4.7.2",
+    "onchange": "^3.3.0",
+    "parallelshell": "^3.0.2",
+    "postcss-cli": "^5.0.0"
+  }
+}
