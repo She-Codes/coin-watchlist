@@ -65,6 +65,7 @@ let list = {
     //   setTimeout(list.pollApi, 30000);
     // });
     let loaderTimer;
+    // this might be clearer if i declare poll outside of this...
     let pollTimer = setTimeout(function poll() {
       loader.classList.remove('error');
       loader.classList.add('show');
@@ -88,6 +89,9 @@ let list = {
       // the order may have changed but how can i reorder without messing up if someone was typing
       // i think i need a loader to appear and animate for a few seconds before list is updated in
       // case the order shifts it won't be too jarring.
+
+        // allow loader to run for 5 seconds before it is removed and coins are updated so that 
+        // the user can know the list may be about to change
         loaderTimer = setTimeout(function() {
           loader.classList.remove('show');
           console.log('Pollin!');
@@ -186,10 +190,6 @@ class Coin {
     li.id = this.symbol.toLowerCase();
     li.innerHTML = liContent;
     return li;
-  }
-  
-  updateLiData() {
-    let li = document.getElementById
   }
 }
 
