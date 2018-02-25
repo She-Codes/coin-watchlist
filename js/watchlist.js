@@ -1,13 +1,12 @@
+let loader;
 let user = 1;
 let coinUrl = 'https://api.coinmarketcap.com/v1/ticker/';
-let loader = document.getElementById('loader');
 let userCoins = {};
 let database = firebase.database();
 let coinsDB = database.ref('coins');
 // ex. database.ref('coins/btc').set(userCoins.btc);
 
 let list = {
-  ulElement: document.getElementById('coin-list'),
   primarySort: 'rating',
   primarySortDirection: 'desc',
   secondarySort: 'rank',
@@ -15,28 +14,44 @@ let list = {
   
   init() {
     let getCoinsTimer;
-    
+    // build list structure here
+    this.buildList();
+    loader = document.getElementById('loader');
     loader.classList.add('show');
     this.getCoins().catch(function(error) {
+      // if getting coins fails show error loader,
+      // wait 10 seconds and run init again
       console.log('initial error ', error.message);
-      // run init here again on a timer maybe every 10 seconds
-      // show red error loader here
       loader.classList.add('error');
       getCoinsTimer = setTimeout(list.init, 10000);
     });
-    //this.pollApi();
+  },
+
+  buildList() {
+    document.querySelector('.container')
+    .innerHTML = `<input type="text" id="coin-filter">
+    <div class="sort-options">
+      <button type="button" id="rank-sort" class="default">Rank</button>
+      <button type="button" id="name-sort" class="default">Name</button>
+      <button type="button" id="price-sort" class="default">Price</button>
+      <button type="button" id="rating-sort" class="default">Rating</button>
+      <div class="loader-container">
+        <div id="loader">
+          <div class="bar1"></div>
+          <div class="bar2"></div>
+          <div class="bar3"></div>
+          <div class="bar4"></div>
+          <div class="bar5"></div>
+          <div class="bar6"></div>
+        </div>
+      </div><!-- end .loader-container -->
+      <button type="button" id="sort-asc"><i class="fas fa-fw fa-sort-alpha-up"></i></button>
+      <button type="button" id="sort-desc"><i class="fas fa-fw fa-sort-alpha-down"></i></button>
+    </div><!-- end .sort-options -->
+    <ul id="coin-list"></ul>`;
   },
   
   pollApi() {
-    // do fetch
-      // on successful completion fun settimeout which runs pollApi again
-    // fetch(coinUrl).then(function(response) {
-    //   return response.json();
-    // }).then(function(coinData) {
-    //   console.log('Pollin!');
-    //   console.log(coinData);
-    //   setTimeout(list.pollApi, 30000);
-    // });
     let loaderTimer;
     // this might be clearer if i declare poll outside of this...
     let pollTimer = setTimeout(function poll() {
@@ -121,11 +136,12 @@ let list = {
   },
 
   build(coins) {
+    let ulElement = document.getElementById('coin-list');
     let coin, li;
     for (let coinObj of coins) {
       let coin = new Coin(coinObj);
       let li = coin.buildCoinMarkup();
-      list.ulElement.appendChild(li);
+      ulElement.appendChild(li);
       
       // update userRatings obj
       if ( !(userCoins.hasOwnProperty(coin.symbol.toLowerCase())) ) {
@@ -208,8 +224,23 @@ function bindEvents() {
   document.addEventListener('focusout', focusoutHandler);
 }
 
-list.init();
-bindEvents();
+function removeEvents() {
+  document.removeEventListener('click', clickHandler);
+  document.removeEventListener('focusout', focusoutHandler);
+}
+
+firebase.auth().onAuthStateChanged(function(user) {
+  if ( user ) {
+    list.init();
+    bindEvents();
+  } else {
+    removeEvents();
+    // also need to remove timers?
+    document.querySelector('.container').innerHTML = '';
+  }
+});
+
+
 
 //**TO DO**//
 // init app once signed in, meaning js needs to build whole container
