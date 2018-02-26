@@ -1,4 +1,4 @@
-let loader;
+let loader, getCoinsTimer, loaderTimer, pollTimer;
 let user = 1;
 let coinUrl = 'https://api.coinmarketcap.com/v1/ticker/';
 let userCoins = {};
@@ -13,7 +13,6 @@ let list = {
   secondarySortDirection: 'asc',
   
   init() {
-    let getCoinsTimer;
     // build list structure here
     this.buildList();
     loader = document.getElementById('loader');
@@ -52,9 +51,8 @@ let list = {
   },
   
   pollApi() {
-    let loaderTimer;
     // this might be clearer if i declare poll outside of this...
-    let pollTimer = setTimeout(function poll() {
+    pollTimer = setTimeout(function poll() {
       loader.classList.remove('error');
       loader.classList.add('show');
       fetch(coinUrl).then(function(response) {
@@ -235,7 +233,9 @@ firebase.auth().onAuthStateChanged(function(user) {
     bindEvents();
   } else {
     removeEvents();
-    // also need to remove timers?
+    clearTimeout(getCoinsTimer);
+    clearTimeout(loaderTimer);
+    clearTimeout(pollTimer);
     document.querySelector('.container').innerHTML = '';
   }
 });
