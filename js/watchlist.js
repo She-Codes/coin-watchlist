@@ -1,9 +1,9 @@
 let loader, getCoinsTimer, loaderTimer, pollTimer;
-let user = 1;
+let currentUser;
 let coinUrl = 'https://api.coinmarketcap.com/v1/ticker/';
 let userCoins = {};
-let database = firebase.database();
-let coinsDB = database.ref('coins');
+let database = firebase.firestore();
+//let coinsDB = database.ref('coins');
 // ex. database.ref('coins/btc').set(userCoins.btc);
 
 let list = {
@@ -24,6 +24,7 @@ let list = {
       loader.classList.add('error');
       getCoinsTimer = setTimeout(list.init, 10000);
     });
+    currentUser = firebase.auth().currentUser;
   },
 
   buildList() {
