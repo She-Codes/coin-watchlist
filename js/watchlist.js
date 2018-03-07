@@ -3,8 +3,10 @@ let currentUser;
 let coinUrl = 'https://api.coinmarketcap.com/v1/ticker/';
 let userCoins = {};
 let database = firebase.firestore();
-//let coinsDB = database.ref('coins');
-// ex. database.ref('coins/btc').set(userCoins.btc);
+let usersCollectionRef = database.collection('users');
+let coinCollectionRef = database.collection('coins');
+let userCoinsRef;
+
 
 let list = {
   primarySort: 'rating',
@@ -13,6 +15,14 @@ let list = {
   secondarySortDirection: 'asc',
   
   init() {
+    currentUser = firebase.auth().currentUser;
+    usersCollectionRef.doc(currentUser.uid).set({
+      displayName: currentUser.displayName,
+      email: currentUser.email,
+      photoURL: currentUser.photoURL
+    });
+    coinCollectionRef.doc(currentUser.uid).set({}, {merge: true});
+    userCoinsRef = coinCollectionRef.doc(currentUser.uid);
     // build list structure here
     this.buildList();
     loader = document.getElementById('loader');
@@ -24,7 +34,6 @@ let list = {
       loader.classList.add('error');
       getCoinsTimer = setTimeout(list.init, 10000);
     });
-    currentUser = firebase.auth().currentUser;
   },
 
   buildList() {
@@ -86,7 +95,8 @@ let list = {
           // this is where we update the data
           for (let coinObj of coinData) {
             let userCoin;
-            let newCoin = new Coin(coinObj);
+            //let newCoin = new Coin(coinObj);
+            let newCoin;
             // let li = coin.buildCoinMarkup();
             // list.ulElement.appendChild(li);
 
@@ -101,8 +111,19 @@ let list = {
               console.log(userCoin);
             // if it's not in userCoins add it 
             } else {
-              userCoins[coinObj.symbol.toLowerCase()] = new Coin(coinObj);
+              //userCoins[coinObj.symbol.toLowerCase()] = new Coin(coinObj);
+              newCoin = {
+                name: coinObj.name,
+                symbol: coinObj.symbol,
+                value: coinObj.price_usd,
+                rank: coinObj.rank,
+                percentChange: coinObj.percent_change_24h,
+                rating: 0
+              }
+              userCoins[coinObj.symbol.toLowerCase()] = newCoin;
             }
+
+            userCoinsRef.set(userCoins, {merge: true});
           }
 
           // but how do i slip in a new li without rerendering the whole list 
@@ -138,14 +159,26 @@ let list = {
     let ulElement = document.getElementById('coin-list');
     let coin, li;
     for (let coinObj of coins) {
-      let coin = new Coin(coinObj);
-      let li = coin.buildCoinMarkup();
+      //let coin = new Coin(coinObj);
+      let coin = {
+        name: coinObj.name,
+        symbol: coinObj.symbol,
+        value: coinObj.price_usd,
+        rank: coinObj.rank,
+        percentChange: coinObj.percent_change_24h,
+        rating: 0
+      }
+      //let li = coin.buildCoinMarkup();
+      let li = buildCoinMarkup(coin);
       ulElement.appendChild(li);
       
       // update userRatings obj
       if ( !(userCoins.hasOwnProperty(coin.symbol.toLowerCase())) ) {
         userCoins[coin.symbol.toLowerCase()] = coin;
       }
+      //console.log('curve');
+      //console.log(userCoinsRef);
+      userCoinsRef.set(userCoins, {merge: true});
     }
   },
   
@@ -179,6 +212,21 @@ class Coin {
     li.innerHTML = liContent;
     return li;
   }
+}
+
+function buildCoinMarkup(coin) {
+  let li = document.createElement('li');
+  let liContent = `<div class="cmc-rank">${coin.rank}</div>
+    <div class="name">${coin.name}  (${coin.symbol})</div>
+    <div class="value">$${coin.value}</div>
+    <div class="rating"><input type="text" data-coin="${coin.symbol.toLowerCase()}" value="${coin.rating}"></div>
+    <div class="controls">
+      <button type="button" class="rating-button" id="rating-up" data-change="add">+</button>
+      <button type="button" class="rating-button" id="rating-down" data-change="subtract">-</button>
+    </div>`;
+  li.id = coin.symbol.toLowerCase();
+  li.innerHTML = liContent;
+  return li;
 }
 
 function updateRatingValue(target) {
@@ -249,3 +297,6 @@ firebase.auth().onAuthStateChanged(function(user) {
   // remove container
   // remove event listeners?
   // other things will be stored in firebase so it won't matter
+// NEED TO INITIALLY QUERY FIREBASE FOR COIN DATA, SHOW IF THERE
+// IS ANY, IF NOT SHOW COINMARKET THEN START QUERYING COINMARKET
+// TO UPDATE
