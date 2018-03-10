@@ -175,7 +175,7 @@ let list = {
       li = buildCoinMarkup(coin);
       ulElement.appendChild(li);
 
-      userCoinsRef.set(userCoins, {merge: true});
+      //userCoinsRef.set(userCoins, {merge: true});
     }
 
     userCoinsRef.get().then(function(doc) {
