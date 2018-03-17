@@ -4,7 +4,8 @@ let coinUrl = 'https://api.coinmarketcap.com/v1/ticker/';
 let userCoins = {};
 let database = firebase.firestore();
 let usersCollectionRef = database.collection('users');
-let coinCollectionRef = database.collection('coins');
+// let coinCollectionRef = database.collection('coins');
+let ratingsCollectionRef = database.collection('ratings');
 let userCoinsRef;
 
 
@@ -14,7 +15,7 @@ let list = {
   secondarySort: 'rank',
   secondarySortDirection: 'asc',
   
-  init() {
+  init: function() {
     currentUser = firebase.auth().currentUser;
     usersCollectionRef.doc(currentUser.uid).set({
       displayName: currentUser.displayName,
@@ -22,7 +23,8 @@ let list = {
       photoURL: currentUser.photoURL
     });
     //coinCollectionRef.doc(currentUser.uid).set({}, {merge: true});
-    userCoinsRef = coinCollectionRef.doc(currentUser.uid);
+    //userCoinsRef = coinCollectionRef.doc(currentUser.uid);
+    userRatingsRef = ratingsCollectionRef.doc(currentUser.uid);
     // build list structure here
     this.buildList();
     loader = document.getElementById('loader');
@@ -36,7 +38,7 @@ let list = {
     });
   },
 
-  buildList() {
+  buildList: function() {
     document.querySelector('.container')
     .innerHTML = `<input type="text" id="coin-filter">
     <div class="sort-options">
@@ -60,7 +62,7 @@ let list = {
     <ul id="coin-list"></ul>`;
   },
   
-  pollApi() {
+  pollApi: function() {
     // this might be clearer if i declare poll outside of this...
     pollTimer = setTimeout(function poll() {
       loader.classList.remove('error');
@@ -83,10 +85,9 @@ let list = {
           // this is where we update the data
           for (let coinObj of coinData) {
             let userCoin;
-            //let newCoin = new Coin(coinObj);
-            let newCoin;
-            // let li = coin.buildCoinMarkup();
-            // list.ulElement.appendChild(li);
+            let newCoin = new Coin(coinObj);
+            let li = coin.buildCoinMarkup();
+            list.ulElement.appendChild(li);
 
             // update userRatings obj
 
@@ -128,7 +129,7 @@ let list = {
     }, 60000);
   },
   
-  async getCoins() {
+  getCoins: async function() {
     let response = await fetch(coinUrl); 
     let coins = await response.json();
 
@@ -138,62 +139,20 @@ let list = {
     list.pollApi();
   },
 
-  // so i'm getting the coins from cmc...
-  // at the start of the app userCoins will be empty
-  // i can get a firebase doc and check to see if it
-  // exists, if not set it, but if i'm getting data from
-  // cmc  i need to be careful not to overwrite rating field
-  // 1. check firebase to see if there is data there
-  // 2. if so populate userCoins with that data
-  // 3. The next step regardless of whether firebase has
-  //  data or not is to get data from cmc
-  // 4. Merge the cmc data with usercoins
-  // 5. Have to be careful what happens here with the rating field
-  // Although I guess I'm checking to see whether the coin is there
-  // first and if not adding the whole thing, if not then I will
-  // update all fields except rating.
-
-  build(coins) {
+  build: function(coins) {
     let ulElement = document.getElementById('coin-list');
     let coin, li;
     for (let coinObj of coins) {
-      coin = {
-        name: coinObj.name,
-        symbol: coinObj.symbol,
-        value: coinObj.price_usd,
-        rank: coinObj.rank,
-        percentChange: coinObj.percent_change_24h,
-        rating: 0
-      }
-
+      let coin = new Coin(coinObj);
+      let li = coin.buildCoinMarkup();
+      ulElement.appendChild(li);
       
       // update userRatings obj
       if ( !(userCoins.hasOwnProperty(coin.symbol.toLowerCase())) ) {
         userCoins[coin.symbol.toLowerCase()] = coin;
       }
-
-      li = buildCoinMarkup(coin);
-      ulElement.appendChild(li);
-
-      //userCoinsRef.set(userCoins, {merge: true});
     }
 
-    userCoinsRef.get().then(function(doc) {
-      console.log(doc.data());
-
-      if ( doc.exists ) {
-        // set userCoins equal to the data obj
-        // loop through coins from cmc and see if any need
-        // to be added
-        console.log('exists');
-      } else {
-        // use the coins passed into this function
-        // set userCoins then set firebase
-        console.log('does not exist');
-      }
-    }).catch(function(error) {
-      console.log('error');
-    });
   },
   
   sortList() {
@@ -201,19 +160,30 @@ let list = {
   }
 };
 
-function buildCoinMarkup(coin) {
-  let li = document.createElement('li');
-  let liContent = `<div class="cmc-rank">${coin.rank}</div>
-    <div class="name">${coin.name}  (${coin.symbol})</div>
-    <div class="value">$${coin.value}</div>
-    <div class="rating"><input type="text" data-coin="${coin.symbol.toLowerCase()}" value="${coin.rating}"></div>
-    <div class="controls">
-      <button type="button" class="rating-button" id="rating-up" data-change="add">+</button>
-      <button type="button" class="rating-button" id="rating-down" data-change="subtract">-</button>
-    </div>`;
-  li.id = coin.symbol.toLowerCase();
-  li.innerHTML = liContent;
-  return li;
+class Coin {
+  constructor(coinObj) {
+    this.name = coinObj.name;
+    this.symbol = coinObj.symbol;
+    this.value = coinObj.price_usd;
+    this.rank = coinObj.rank;
+    this.percentChange = coinObj.percent_change_24h;
+    this.rating = 0;
+  }
+  
+  buildCoinMarkup() {
+    let li = document.createElement('li');
+    let liContent = `<div class="cmc-rank">${this.rank}</div>
+      <div class="name">${this.name}  (${this.symbol})</div>
+      <div class="value">$${this.value}</div>
+      <div class="rating"><input type="text" data-coin="${this.symbol.toLowerCase()}" value="${this.rating}"></div>
+      <div class="controls">
+        <button type="button" class="rating-button" id="rating-up" data-change="add">+</button>
+        <button type="button" class="rating-button" id="rating-down" data-change="subtract">-</button>
+      </div>`;
+    li.id = this.symbol.toLowerCase();
+    li.innerHTML = liContent;
+    return li;
+  }
 }
 
 function updateRatingValue(target) {
