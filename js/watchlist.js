@@ -24,7 +24,7 @@ let list = {
     });
     //coinCollectionRef.doc(currentUser.uid).set({}, {merge: true});
     //userCoinsRef = coinCollectionRef.doc(currentUser.uid);
-    userRatingsRef = ratingsCollectionRef.doc(currentUser.uid);
+    userRatingsRef = ratingsCollectionRef.doc(currentUser.uid).collection('ratings');
     // build list structure here
     this.buildList();
     loader = document.getElementById('loader');
@@ -78,12 +78,9 @@ let list = {
       let li = coin.listElement = coin.buildCoinMarkup();
       ulElement.appendChild(li);
       
-      // update userRatings obj
-      if ( !(userCoins.hasOwnProperty(coin.symbol.toLowerCase())) ) {
-        userCoins[coin.symbol.toLowerCase()] = coin;
-      }
+      // update userCoins object
+      userCoins[coin.symbol.toLowerCase()] = coin;
     }
-
   },
   
   sortList() {
@@ -126,17 +123,23 @@ function updateRatingValue(target) {
   let coin = userCoins[coinSymbol];
   coin.rating = target.dataset.change === 'add' ? coin.rating + 1 : coin.rating - 1;
   ratingInput.value = coin.rating;
-  //console.log(coin);
+  console.log(coin);
+  userRatingsRef.doc(coin.symbol).set({
+    name: coin.name,
+    symbol: coin.symbol,
+    rating: coin.rating
+  })
+
 }
 
 // updates the coin object
-function updateCoinRating(input) {
-  let coinSymbol = input.dataset.coin;
-  let coin = userCoins[coinSymbol];
-  console.log(coin);
-  coin.rating = Number(input.value);
-  //console.log(coin);
-}
+// function updateCoinRating(input) {
+//   let coinSymbol = input.dataset.coin;
+//   let coin = userCoins[coinSymbol];
+//   console.log(coin);
+//   coin.rating = Number(input.value);
+//   //console.log(coin);
+// }
 
 function clickHandler(e) {
   let target = e.target;
