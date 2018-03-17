@@ -62,81 +62,12 @@ let list = {
     <ul id="coin-list"></ul>`;
   },
   
-  pollApi: function() {
-    // this might be clearer if i declare poll outside of this...
-    pollTimer = setTimeout(function poll() {
-      loader.classList.remove('error');
-      loader.classList.add('show');
-      fetch(coinUrl).then(function(response) {
-        console.log('response', response.ok);
-        if ( response.ok ) {
-          return response.json();
-        } else {
-          loader.classList.add('error');
-          pollTimer = setTimeout(poll, 120000);
-        }
-      }).then(function(coinData) {
-        // allow loader to run for 5 seconds before it is removed and coins are updated so that 
-        // the user can know the list may be about to change
-        loaderTimer = setTimeout(function() {
-          loader.classList.remove('show');
-          console.log('Pollin!');
-          //console.log(coinData);
-          // this is where we update the data
-          for (let coinObj of coinData) {
-            let userCoin;
-            let newCoin = new Coin(coinObj);
-            let li = coin.buildCoinMarkup();
-            list.ulElement.appendChild(li);
-
-            // update userRatings obj
-
-            // if it's in userCoins already then update it
-            if ( (userCoins.hasOwnProperty(coinObj.symbol.toLowerCase())) ) {
-              userCoin = userCoins[coinObj.symbol.toLowerCase()];
-              // update usercoin
-              userCoin.value = coinObj.price_usd;
-              userCoin.percentChange = coinObj.percent_change_24h;
-              console.log(userCoin);
-            // if it's not in userCoins add it 
-            } else {
-              //userCoins[coinObj.symbol.toLowerCase()] = new Coin(coinObj);
-              newCoin = {
-                name: coinObj.name,
-                symbol: coinObj.symbol,
-                value: coinObj.price_usd,
-                rank: coinObj.rank,
-                percentChange: coinObj.percent_change_24h,
-                rating: 0
-              }
-              userCoins[coinObj.symbol.toLowerCase()] = newCoin;
-            }
-
-            userCoinsRef.set(userCoins, {merge: true});
-          }
-
-          // but how do i slip in a new li without rerendering the whole list 
-          // sort coins first according to selected sort
-          // loop through coins
-          // check to see if li is on page if not then add it if it is then update it
-        }, 5000);
-        pollTimer = setTimeout(poll, 60000);
-      }).catch(function(error) {
-        console.log("F'in problems ", error.message);
-        loader.classList.add('error');
-        pollTimer = setTimeout(poll, 120000);
-      });
-    }, 60000);
-  },
-  
   getCoins: async function() {
     let response = await fetch(coinUrl); 
     let coins = await response.json();
 
     loader.classList.remove('show', 'error');
     list.build(coins);
-    
-    list.pollApi();
   },
 
   build: function(coins) {
@@ -144,7 +75,7 @@ let list = {
     let coin, li;
     for (let coinObj of coins) {
       let coin = new Coin(coinObj);
-      let li = coin.buildCoinMarkup();
+      let li = coin.listElement = coin.buildCoinMarkup();
       ulElement.appendChild(li);
       
       // update userRatings obj
