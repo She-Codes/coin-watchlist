@@ -6,7 +6,7 @@ let database = firebase.firestore();
 let usersCollectionRef = database.collection('users');
 // let coinCollectionRef = database.collection('coins');
 let ratingsCollectionRef = database.collection('ratings');
-let userCoinsRef;
+let userRatingsRef;
 
 
 let list = {
@@ -72,14 +72,30 @@ let list = {
 
   build: function(coins) {
     let ulElement = document.getElementById('coin-list');
-    let coin, li;
+    let coin, li, ratingDocRef, doc;
     for (let coinObj of coins) {
-      let coin = new Coin(coinObj);
-      let li = coin.listElement = coin.buildCoinMarkup();
-      ulElement.appendChild(li);
+      coin = new Coin(coinObj);
+      // ratingDocRef = userRatingsRef.doc(coin.symbol);
+      // console.log(coin);
+      // ratingDocRef.get().then(function(doc) {
+      //   if ( doc.exists ) {
+      //     console.log('doc data: ', doc.data().symbol, ' ', doc.data().rating);
+      //     coin.rating = doc.data().rating;
+      //     console.log(coin);
+      //   }
+      // });
+      updateCoinWithStoredRating(coin, ulElement);
+      //doc = await ratingDocRef.get();
+      // if ( doc.exists ) {
+      //   console.log('doc data: ', doc.data().symbol, ' ', doc.data().rating);
+      //   coin.rating = doc.data().rating;
+      //   console.log(coin);
+      // }
+      // li = coin.listElement = coin.buildCoinMarkup();
+      // ulElement.appendChild(li);
       
       // update userCoins object
-      userCoins[coin.symbol.toLowerCase()] = coin;
+      userCoins[coin.symbol] = coin;
     }
   },
   
@@ -103,18 +119,18 @@ class Coin {
     let liContent = `<div class="cmc-rank">${this.rank}</div>
       <div class="name">${this.name}  (${this.symbol})</div>
       <div class="value">$${this.value}</div>
-      <div class="rating"><input type="text" data-coin="${this.symbol.toLowerCase()}" value="${this.rating}"></div>
+      <div class="rating"><input type="text" data-coin="${this.symbol}" value="${this.rating}"></div>
       <div class="controls">
         <button type="button" class="rating-button" id="rating-up" data-change="add">+</button>
         <button type="button" class="rating-button" id="rating-down" data-change="subtract">-</button>
       </div>`;
-    li.id = this.symbol.toLowerCase();
+    li.id = this.symbol;
     li.innerHTML = liContent;
     return li;
   }
 }
 
-function updateRatingValue(target) {
+function updateRatingWithControl(target) {
   let li = target.closest('li');
   let coinSymbol = li.id;
   let ratingInput = li.querySelector('.rating input');
@@ -128,8 +144,22 @@ function updateRatingValue(target) {
     name: coin.name,
     symbol: coin.symbol,
     rating: coin.rating
-  })
+  });
+}
 
+function updateCoinWithStoredRating(coin, ul) {
+  ratingDocRef = userRatingsRef.doc(coin.symbol);
+  console.log(coin);
+  ratingDocRef.get().then(function(doc) {
+    if ( doc.exists ) {
+      console.log('doc data: ', doc.data().symbol, ' ', doc.data().rating);
+      coin.rating = doc.data().rating;
+      console.log(coin);
+    }
+    // ideally this should not be in this function?
+    li = coin.listElement = coin.buildCoinMarkup();
+    ul.appendChild(li);
+  });
 }
 
 // updates the coin object
@@ -145,7 +175,7 @@ function clickHandler(e) {
   let target = e.target;
   
   if ( target.classList.contains('rating-button') ) {
-    updateRatingValue(target);
+    updateRatingWithControl(target);
   }
 }
 
