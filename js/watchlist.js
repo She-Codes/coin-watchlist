@@ -27,6 +27,7 @@ let list = {
     userRatingsRef = ratingsCollectionRef.doc(currentUser.uid).collection('ratings');
     // build list structure here
     this.buildList();
+    this.textInput = document.getElementById('coin-filter');
     loader = document.getElementById('loader');
     loader.classList.add('show');
     this.getCoins().catch(function(error) {
@@ -68,11 +69,13 @@ let list = {
 
     loader.classList.remove('show', 'error');
     list.build(coins);
+    // list is empty because it's firing before build coins is finished
+    list.listItems = document.querySelectorAll('#coin-list li');
   },
 
   build: function(coins) {
     let ulElement = document.getElementById('coin-list');
-    let coin, li, ratingDocRef, doc;
+    let coin, doc;
     for (let coinObj of coins) {
       coin = new Coin(coinObj);
       // ratingDocRef = userRatingsRef.doc(coin.symbol);
@@ -97,6 +100,22 @@ let list = {
       // update userCoins object
       userCoins[coin.symbol] = coin;
     }
+  },
+
+  filter(searchString) {
+    //let regex = new RegExp(searchString, 'gi');
+    let query = searchString.toLowerCase();
+    if ( list.listItems && list.listItems.length ) {
+      console.log('start filter');
+
+      list.listItems.forEach(function(li) {
+        li.classList.remove('hide');
+        if ( li.textContent.toLowerCase().indexOf(query) === -1 ) {
+          li.classList.add('hide');
+        }
+      });
+    }
+
   },
   
   sortList() {
@@ -148,7 +167,9 @@ function updateRatingWithControl(target) {
 }
 
 function updateCoinWithStoredRating(coin, ul) {
-  ratingDocRef = userRatingsRef.doc(coin.symbol);
+  let ratingDocRef = userRatingsRef.doc(coin.symbol);
+  let li;
+
   console.log(coin);
   ratingDocRef.get().then(function(doc) {
     if ( doc.exists ) {
@@ -187,9 +208,18 @@ function focusoutHandler(e) {
   }
 }
 
+function keyupHandler(e) {
+  let target = e.target;
+
+  if ( target == list.textInput ) {
+    list.filter(list.textInput.value);
+  }
+}
+
 function bindEvents() {
   document.addEventListener('click', clickHandler);
   document.addEventListener('focusout', focusoutHandler);
+  document.addEventListener('keyup', keyupHandler);
 }
 
 function removeEvents() {
