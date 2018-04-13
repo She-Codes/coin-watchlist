@@ -6,41 +6,38 @@ let database = firebase.firestore();
 let usersCollectionRef = database.collection('users');
 // let coinCollectionRef = database.collection('coins');
 let ratingsCollectionRef = database.collection('ratings');
-let userRatingsRef;
+let primarySort = 'rating';
+let primarySortDirection = 'desc';
+let secondarySort = 'rank';
+let secondarySortDirection = 'asc';
+let textInput, userRatingsRef, listItems;
 
+function initList() {
+  currentUser = firebase.auth().currentUser;
+  usersCollectionRef.doc(currentUser.uid).set({
+    displayName: currentUser.displayName,
+    email: currentUser.email,
+    photoURL: currentUser.photoURL
+  });
+  //coinCollectionRef.doc(currentUser.uid).set({}, {merge: true});
+  //userCoinsRef = coinCollectionRef.doc(currentUser.uid);
+  userRatingsRef = ratingsCollectionRef.doc(currentUser.uid).collection('ratings');
+  // build list structure here
+  buildList();
+  textInput = document.getElementById('coin-filter');
+  loader = document.getElementById('loader');
+  loader.classList.add('show');
+  getCoins().catch(function (error) {
+    // if getting coins fails show error loader,
+    // wait 10 seconds and run init again
+    console.log('initial error ', error.message);
+    loader.classList.add('error');
+    getCoinsTimer = setTimeout(list.init, 10000);
+  });
+}
 
-let list = {
-  primarySort: 'rating',
-  primarySortDirection: 'desc',
-  secondarySort: 'rank',
-  secondarySortDirection: 'asc',
-  
-  init: function() {
-    currentUser = firebase.auth().currentUser;
-    usersCollectionRef.doc(currentUser.uid).set({
-      displayName: currentUser.displayName,
-      email: currentUser.email,
-      photoURL: currentUser.photoURL
-    });
-    //coinCollectionRef.doc(currentUser.uid).set({}, {merge: true});
-    //userCoinsRef = coinCollectionRef.doc(currentUser.uid);
-    userRatingsRef = ratingsCollectionRef.doc(currentUser.uid).collection('ratings');
-    // build list structure here
-    this.buildList();
-    this.textInput = document.getElementById('coin-filter');
-    loader = document.getElementById('loader');
-    loader.classList.add('show');
-    this.getCoins().catch(function(error) {
-      // if getting coins fails show error loader,
-      // wait 10 seconds and run init again
-      console.log('initial error ', error.message);
-      loader.classList.add('error');
-      getCoinsTimer = setTimeout(list.init, 10000);
-    });
-  },
-
-  buildList: function() {
-    document.querySelector('.container')
+function buildList() {
+  document.querySelector('.container')
     .innerHTML = `<input type="text" id="coin-filter">
     <div class="sort-options">
       <button type="button" id="rank-sort" class="default">Rank</button>
@@ -61,67 +58,47 @@ let list = {
       <button type="button" id="sort-desc"><i class="fas fa-fw fa-sort-alpha-down"></i></button>
     </div><!-- end .sort-options -->
     <ul id="coin-list"></ul>`;
-  },
-  
-  getCoins: async function() {
-    let response = await fetch(coinUrl); 
-    let coins = await response.json();
+}
 
-    loader.classList.remove('show', 'error');
-    list.build(coins);
-    // list is empty because it's firing before build coins is finished
-    list.listItems = document.querySelectorAll('#coin-list li');
-  },
+async function getCoins() {
+  let response = await fetch(coinUrl);
+  let coins = await response.json();
 
-  build: function(coins) {
-    let ulElement = document.getElementById('coin-list');
-    let coin, doc;
-    for (let coinObj of coins) {
-      coin = new Coin(coinObj);
-      // ratingDocRef = userRatingsRef.doc(coin.symbol);
-      // console.log(coin);
-      // ratingDocRef.get().then(function(doc) {
-      //   if ( doc.exists ) {
-      //     console.log('doc data: ', doc.data().symbol, ' ', doc.data().rating);
-      //     coin.rating = doc.data().rating;
-      //     console.log(coin);
-      //   }
-      // });
-      updateCoinWithStoredRating(coin, ulElement);
-      //doc = await ratingDocRef.get();
-      // if ( doc.exists ) {
-      //   console.log('doc data: ', doc.data().symbol, ' ', doc.data().rating);
-      //   coin.rating = doc.data().rating;
-      //   console.log(coin);
-      // }
-      // li = coin.listElement = coin.buildCoinMarkup();
-      // ulElement.appendChild(li);
-      
-      // update userCoins object
-      userCoins[coin.symbol] = coin;
-    }
-  },
+  loader.classList.remove('show', 'error');
+  populateList(coins);
+  // list is empty because it's firing before build coins is finished
+  listItems = document.querySelectorAll('#coin-list li');
+}
 
-  filter(searchString) {
-    //let regex = new RegExp(searchString, 'gi');
-    let query = searchString.toLowerCase();
-    if ( list.listItems && list.listItems.length ) {
-      console.log('start filter');
-
-      list.listItems.forEach(function(li) {
-        li.classList.remove('hide');
-        if ( li.textContent.toLowerCase().indexOf(query) === -1 ) {
-          li.classList.add('hide');
-        }
-      });
-    }
-
-  },
-  
-  sortList() {
-    let coinArray = Object.values(userCoins);
+function populateList(coins) {
+  let ulElement = document.getElementById('coin-list');
+  let coin, doc;
+  for (let coinObj of coins) {
+    coin = new Coin(coinObj);
+    updateCoinWithStoredRating(coin, ulElement);
+    userCoins[coin.symbol] = coin;
   }
-};
+}
+
+function filter(searchString) {
+  //let regex = new RegExp(searchString, 'gi');
+  let query = searchString.toLowerCase();
+  if (listItems && listItems.length) {
+    console.log('start filter');
+
+    listItems.forEach(function (li) {
+      li.classList.remove('hide');
+      if (li.textContent.toLowerCase().indexOf(query) === -1) {
+        li.classList.add('hide');
+      }
+    });
+  }
+}
+
+function sortList() {
+  let coinArray = Object.values(userCoins);
+}
+
 
 class Coin {
   constructor(coinObj) {
@@ -229,7 +206,7 @@ function removeEvents() {
 
 firebase.auth().onAuthStateChanged(function(user) {
   if ( user ) {
-    list.init();
+    initList();
     bindEvents();
   } else {
     removeEvents();
