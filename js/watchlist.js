@@ -83,6 +83,8 @@ function populateList(coins) {
 function filter(searchString) {
   //let regex = new RegExp(searchString, 'gi');
   let query = searchString.toLowerCase();
+  console.log(query);
+  // TODO: search dom elements for now can figure out a better way later
   if (listItems && listItems.length) {
     console.log('start filter');
 
@@ -188,8 +190,8 @@ function focusoutHandler(e) {
 function keyupHandler(e) {
   let target = e.target;
 
-  if ( target == list.textInput ) {
-    list.filter(list.textInput.value);
+  if ( target.matches('#coin-filter') ) {
+    filter(target.value);
   }
 }
 
